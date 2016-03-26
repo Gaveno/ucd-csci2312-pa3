@@ -20,8 +20,10 @@ namespace Clustering {
 
     Cluster::Centroid::Centroid(unsigned int d, const Cluster &c) : __c(c), __p(d) { // needs ref to cluster
         __dimensions = d;
-        if (__c.__size == 0)
+        if (__c.__size == 0) {
+            __valid = false;
             toInfinity();
+        }
     }
 
     // getters/setters
@@ -41,13 +43,19 @@ namespace Clustering {
 
     // functions
     void Cluster::Centroid::compute() {
-        double *avg = new double(__dimensions);
+        double avg;
 
-        for (unsigned int d = 0; d < __dimensions; ++d) {
-            for (unsigned int i = 0; i < __c.__size; ++i) {
-                avg[d] += __c[i][d];
+        if (__c.__size > 0) {
+            for (unsigned int d = 0; d < __dimensions; ++d) {
+                avg = 0;
+                for (unsigned int i = 0; i < __c.__size; ++i) {
+                    avg += (__c[i])[d];
+                }
+                __p[d] = avg / __c.__size;
             }
-            __p[d] = avg[d] / __dimensions;
+        }
+        else {
+            toInfinity();
         }
 
         __valid = true;
@@ -150,6 +158,7 @@ namespace Clustering {
             if (contains(p))
                 return; // Point already exists, exit
 
+            centroid.setValid(false);
             // next and previous pointers
             LNodePtr next;
             LNodePtr prev;
@@ -196,6 +205,7 @@ namespace Clustering {
             throw DimensionalityMismatchEx(__dimensionality, p.getDims());
 
         if (contains(p)) {
+            centroid.setValid(false);
             // Point is in list
             LNodePtr next;
             LNodePtr prev = nullptr;
@@ -207,7 +217,10 @@ namespace Clustering {
                     // Found point
                     if (prev == nullptr) {
                         // First element
-                        __points = next->next;
+                        if (__size > 1)
+                            __points = next->next;
+                        else
+                            __points = nullptr;
 
                         delete next;
 
@@ -235,6 +248,9 @@ namespace Clustering {
     }
 
     bool Cluster::contains(const Point &p) const {
+        if (__dimensionality != p.getDims())
+            throw DimensionalityMismatchEx(__dimensionality, p.getDims());
+
         LNodePtr next = __points;
 
         while (next != nullptr) {
@@ -255,10 +271,12 @@ namespace Clustering {
             for (unsigned int i = 0; i < __size; ++i) {
                 pointArray[i] = new Point((*this)[i]);
             }
-            for (unsigned int i = __size; i < k; ++i) {
-                pointArray[i] = new Point(__dimensionality);
-                for (unsigned int d = 0; d < __dimensionality; ++d) {
-                    (pointArray[i])[d] = std::numeric_limits<double>::max();
+            if (k > __size) {
+                for (unsigned int i = __size; i < k; ++i) {
+                    pointArray[i] = new Point(__dimensionality);
+                    for (unsigned int d = 0; d < __dimensionality; ++d) {
+                        (pointArray[i])[d] = std::numeric_limits<double>::max();
+                    }
                 }
             }
         }
@@ -310,11 +328,17 @@ namespace Clustering {
 
     // Members: Compound assignment (Point argument)
     Cluster &Cluster::operator+=(const Point &p) {
+        /*if (__dimensionality != p.getDims())
+            throw DimensionalityMismatchEx(__dimensionality, p.getDims());*/
+
         add(p);
 
         return *this;
     }
     Cluster &Cluster::operator-=(const Point &p) {
+        /*if (__dimensionality != p.getDims())
+            throw DimensionalityMismatchEx(__dimensionality, p.getDims());*/
+
         remove(p);
 
         return *this;
@@ -322,6 +346,9 @@ namespace Clustering {
 
     // Members: Compound assignment (Cluster argument)
     Cluster &Cluster::operator+=(const Cluster &rhs) { // union
+        if (__dimensionality != rhs.__dimensionality)
+            throw DimensionalityMismatchEx(__dimensionality, rhs.__dimensionality);
+
         for (int i = 0; i < rhs.getSize(); ++i) {
             add(rhs[i]);
         }
@@ -329,6 +356,9 @@ namespace Clustering {
         return *this;
     }
     Cluster &Cluster::operator-=(const Cluster &rhs) { // (asymmetric) difference
+        if (__dimensionality != rhs.__dimensionality)
+            throw DimensionalityMismatchEx(__dimensionality, rhs.__dimensionality);
+
         for (int i = 0; i < rhs.getSize(); ++i) {
             remove(rhs[i]);
         }
@@ -419,11 +449,17 @@ namespace Clustering {
 
     // Friends: Arithmetic (two Clusters)
     const Cluster operator+(const Cluster &lhs, const Cluster &rhs) { // union
+        if (lhs.__dimensionality != rhs.__dimensionality)
+            throw DimensionalityMismatchEx(lhs.__dimensionality, rhs.__dimensionality);
+
         Cluster sum(lhs);
         sum += rhs;
         return sum;
     }
     const Cluster operator-(const Cluster &lhs, const Cluster &rhs) { // (asymmetric) difference
+        if (lhs.__dimensionality != rhs.__dimensionality)
+            throw DimensionalityMismatchEx(lhs.__dimensionality, rhs.__dimensionality);
+
         Cluster sub(lhs);
         sub -= rhs;
         return sub;
