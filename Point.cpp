@@ -9,14 +9,19 @@
 #include <iostream>
 
 #include "Point.h"
+#include "Exceptions.h"
 
 namespace Clustering {
 
     // Static ID generator
     unsigned int Point::__idGen = 0;
+    const char Point::POINT_VALUE_DELIM = ',';
 
     //  Constructors
-    Point::Point(int dimensions) {
+    Point::Point(unsigned int dimensions) {
+        if (dimensions == 0)
+            throw ZeroDimensionsEx();
+
         // Assign ID and increment for next point
         __id = __idGen;
         ++__idGen;
@@ -30,7 +35,7 @@ namespace Clustering {
         }
     }
 
-    Point::Point(int dimensions, double *array) {
+    Point::Point(unsigned int dimensions, double *array) {
         // Assign ID and increment for next point
         __id = __idGen;
         ++__idGen;
@@ -54,6 +59,9 @@ namespace Clustering {
     }
 
     Point &Point::operator=(const Point &origin) {
+        if (__dim != origin.__dim)
+            throw DimensionalityMismatchEx(__dim, origin.__dim);
+
         if (this != &origin) { // prevent p1 = p1
 
             __dim = origin.__dim;
@@ -77,38 +85,41 @@ namespace Clustering {
         delete [] __values;
     }
 
+    void Point::rewindIdGen() {
+        __idGen--;
+    }
+
     // Accessors & mutators
     int Point::getId() const {
         return __id;
     }
 
-    int Point::getDims() const {
+    unsigned int Point::getDims() const {
         return __dim;
     }
 
-    void Point::setValue(int dim, double val) {
-        // Must be valid dimension for point
-        // or do nothing
-        if (dim >= 0 && dim < __dim) {
-            __values[dim] = val;
+    void Point::setValue(unsigned int dim, double val) {
+        if (dim >= __dim) {
+            throw OutOfBoundsEx(__dim, dim);
         }
+        __values[dim] = val;
     }
-    double Point::getValue(int dim) const {
+    double Point::getValue(unsigned int dim) const {
         // Must be valid dimension for point
         // or return 0
-        if (dim >= 0 && dim < __dim)
-            return __values[dim];
-        else
-            return 0;
+        if (dim >= __dim) {
+            throw OutOfBoundsEx(__dim, dim);
+        }
+
+        return __values[dim];
     }
 
     //  distanceTo(const Point&)
     //  Estimate distance between calling point
     //  and a second point
     double Point::distanceTo(const Point &compPoint) const {
-        //int usedDim = std::min(__dim, compPoint.__dim);     // Dimensions to compare
         if (__dim != compPoint.__dim)
-            return false;   // Dimensions are not same, don't calculate
+            throw DimensionalityMismatchEx(__dim, compPoint.__dim);   // Dimensions are not same, don't calculate
 
         double sumOfProducts = 0;                           // Sum of (xn2 - xn1)^2
 
@@ -155,11 +166,17 @@ namespace Clustering {
     }
 
     // Read and write index
-    // WARNING: Out of bounds returns first value
-    double &Point::operator[](int index) {
+    double &Point::operator[](unsigned int index) {
         //  Prevent access out of bounds
-        if (index < 0 || index >= __dim)
-            index = 0;
+        if (index >= __dim)
+            throw OutOfBoundsEx(__dim, index);
+
+        return __values[index];
+    }
+    const double &Point::operator[](unsigned int index) const {
+        //  Prevent access out of bounds
+        if (index >= __dim)
+            throw OutOfBoundsEx(__dim, index);
 
         return __values[index];
     }
@@ -167,36 +184,22 @@ namespace Clustering {
 
     // Friends
     Point &operator+=(Point &lhs, const Point &rhs) {
-        // Used dimensions is the greater of the two points
-        int usedDims = std::max(lhs.getDims(), rhs.getDims());
-
-        // Resize left array if right is larger
-        if (lhs.__dim < usedDims) {
-            delete [] lhs.__values;
-
-            lhs.__values = new double[usedDims];
-        }
+        if (lhs.__dim != rhs.__dim)
+            throw DimensionalityMismatchEx(lhs.__dim, rhs.__dim);
 
         // Add values of right to values of left
-        for (int i = 0; i < usedDims; ++i) {
+        for (unsigned int i = 0; i < lhs.__dim; ++i) {
             lhs[i] += rhs.getValue(i);      // note: getValue returns 0 if out of bounds
         }
 
         return lhs;
     }
     Point &operator-=(Point &lhs, const Point &rhs) {
-        // Used dimensions is the greater of the two points
-        int usedDims = std::max(lhs.getDims(), rhs.getDims());
-
-        // Resize left array if right is larger
-        if (lhs.__dim < usedDims) {
-            delete [] lhs.__values;
-
-            lhs.__values = new double[usedDims];
-        }
+        if (lhs.__dim != rhs.__dim)
+            throw DimensionalityMismatchEx(lhs.__dim, rhs.__dim);
 
         // Add values of right to values of left
-        for (int i = 0; i < usedDims; ++i) {
+        for (unsigned int i = 0; i < lhs.__dim; ++i) {
             lhs[i] -= rhs.getValue(i);      // note: getValue returns 0 if out of bounds
         }
 
@@ -221,7 +224,7 @@ namespace Clustering {
 
     bool operator==(const Point &lhs, const Point &rhs) {
         if (lhs.__id != rhs.__id)
-            return false;   // ID's don't match, not the same
+            throw DimensionalityMismatchEx(lhs.__dim, rhs.__dim);
 
         for (int i = 0; i < std::max(lhs.__dim, rhs.__dim); ++i) {
             if (lhs.getValue(i) != rhs.getValue(i))
@@ -237,9 +240,10 @@ namespace Clustering {
     }
 
     bool operator<(const Point &lhs, const Point &rhs) {
-        int usedDims = std::max(lhs.__dim, rhs.__dim);
+        if (lhs.__dim != rhs.__dim)
+            throw DimensionalityMismatchEx(lhs.__dim, rhs.__dim);
 
-        for (int i = 0; i < usedDims; ++i) {
+        for (unsigned int i = 0; i < lhs.__dim; ++i) {
             if (lhs.getValue(i) != rhs.getValue(i)) { // Inequality exists, return < comparison
                 return (lhs.getValue(i) < rhs.getValue(i));
             }
@@ -276,25 +280,13 @@ namespace Clustering {
 
 
         std::getline(in, str);
-        int size = std::count(str.begin(), str.end(), ',') + 1;
-
-        //std::cout << "size: " << size << "   ";
-
-        /*/int pos = str.find(",");
-        while (pos != std::string::npos)
-        {
-            str.erase(pos);
-            pos = str.find(",");
-        }*/
+        unsigned int size = (unsigned int)std::count(str.begin(), str.end(), p.POINT_VALUE_DELIM) + 1;
 
         std::stringstream ss(str);
 
 
         if (p.getDims() != size) {
-            delete [] p.__values;
-
-            p.__dim = size;
-            p.__values = new double [p.__dim];
+            throw DimensionalityMismatchEx(p.__dim, size);
         }
 
         int index = 0;  // current dimension index of point

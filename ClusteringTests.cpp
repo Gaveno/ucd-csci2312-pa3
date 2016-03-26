@@ -203,6 +203,7 @@ void test_point_getsetelem(ErrorContext &ec, unsigned int numRuns) {
 
     ec.DESC("--- Test - Point - Get/set element ---");
 
+
     for (int run = 0; run < numRuns; run ++)
     {
         ec.DESC("values default to zero");
