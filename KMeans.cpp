@@ -14,7 +14,7 @@ namespace Clustering {
         if (k == 0)
             throw ZeroClustersEx();
 
-        std::fstream file(filename, std::ios::in);
+        std::ifstream file(filename);
 
         if (!file)
             throw DataFileOpenEx(filename);
@@ -29,12 +29,16 @@ namespace Clustering {
 
         file >> *(__clusters[0]);
 
+        file.close();
+
         __initCentroids = new Point *[k];
+        for (unsigned int i = 0; i < k; ++i) __initCentroids[i] = new Point(dim);
+
         __clusters[0]->pickCentroids(k, __initCentroids);
 
         for (unsigned int i = 1; i < k; ++i) {
             __clusters[i] = new Cluster(dim);
-            __clusters[i]->add(__clusters[0]->remove(*(__initCentroids[i])));
+            //__clusters[i]->add(__clusters[0]->remove(*(__initCentroids[i])));
         }
     }
 
@@ -84,6 +88,11 @@ namespace Clustering {
 
         unsigned int moves = 100;
         unsigned int iter = 0;
+
+        for (unsigned int i = 1; i < __k; ++i) {
+            //__clusters[i] = new Cluster(__dimensionality);
+            __clusters[i]->add(__clusters[0]->remove(*(__initCentroids[i])));
+        }
 
         while (moves > 0 && iter < __maxIter) {
             moves = 0;

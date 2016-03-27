@@ -152,6 +152,7 @@ namespace Clustering {
         if (__size == 0) {
             ++__size;
             __points = new LNode(p, nullptr);
+            centroid.setValid(false);
         }
         else { // Non-empty list
             // Make sure point does not already exist
@@ -269,21 +270,23 @@ namespace Clustering {
     void Cluster::pickCentroids(unsigned int k, Point **pointArray) { // pick k initial centroids
         if (k >= __size) {
             for (unsigned int i = 0; i < __size; ++i) {
-                pointArray[i] = new Point((*this)[i]);
+                //pointArray[i] = new Point((*this)[i]);
+                *(pointArray[i]) = (*this)[i];
             }
             if (k > __size) {
                 for (unsigned int i = __size; i < k; ++i) {
-                    pointArray[i] = new Point(__dimensionality);
+                    //pointArray[i] = new Point(__dimensionality);
                     for (unsigned int d = 0; d < __dimensionality; ++d) {
-                        (pointArray[i])[d] = std::numeric_limits<double>::max();
+                        pointArray[i]->setValue(d, std::numeric_limits<double>::max());
+                        //(pointArray[i])[d] = std::numeric_limits<double>::max();
                     }
                 }
             }
         }
         else {
-            pointArray[0] = new Point((*this)[0]);
+            *(pointArray[0]) = __points->point;
             double avgD = 0;
-            Point furthest(__dimensionality);
+            unsigned int furIndx = 0;
             // a is index of point k
             // b is index of cluster
             // c is index of distance between pointArray and next point
@@ -293,18 +296,18 @@ namespace Clustering {
 
                     // Average distance between current point and pointArray
                     for (unsigned int c = 0; c < a; ++c) {
-                        nextD += (*this)[b].distanceTo(*(pointArray[c]));
+                        nextD += ((*this)[b]).distanceTo(*(pointArray[c]));
                     }
                     nextD /= a;
 
                     // New furthest point
                     if (nextD > avgD) {
                         avgD = nextD;
-                        furthest = (*this)[b];
+                        furIndx = b;
                     }
                 }
-
-                pointArray[a] = new Point(furthest);
+                *(pointArray[a]) = (*this)[furIndx];
+                //pointArray[a] = new Point((*this)[furIndx]);
             }
         }
     }
@@ -330,7 +333,6 @@ namespace Clustering {
     Cluster &Cluster::operator+=(const Point &p) {
         /*if (__dimensionality != p.getDims())
             throw DimensionalityMismatchEx(__dimensionality, p.getDims());*/
-
         add(p);
 
         return *this;
@@ -392,23 +394,27 @@ namespace Clustering {
     }
     std::istream &operator>>(std::istream &in, Cluster &cluster) {
         while (!in.eof()) {
-            Point p(cluster.__dimensionality);
+            //Point p(cluster.__dimensionality);
 
             std::string str;
             std::getline(in, str);
 
-            if (str.length() > 0) {
+            if (str.length() > cluster.__dimensionality) {
+                Point p(cluster.__dimensionality);
                 std::stringstream ss(str);
 
                 try {
                     ss >> p;
+                    cluster.add(p);
                 }
                 catch (DimensionalityMismatchEx& e) {
-                    std::cout << "Caught an exception of type: " << e;
+                    std::cerr << "Caught an exception of type: " << e << std::endl;
                     p.rewindIdGen();
                 }
-
-                cluster.add(p);
+                catch (...) {
+                    std::cerr << "Caught an unknown exception" << std::endl;
+                    p.rewindIdGen();
+                }
             }
         }
 

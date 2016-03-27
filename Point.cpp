@@ -189,7 +189,8 @@ namespace Clustering {
 
         // Add values of right to values of left
         for (unsigned int i = 0; i < lhs.__dim; ++i) {
-            lhs[i] += rhs.getValue(i);      // note: getValue returns 0 if out of bounds
+            //lhs[i] += rhs.getValue(i);      // note: getValue returns 0 if out of bounds
+            lhs[i] += rhs[i];
         }
 
         return lhs;
@@ -200,7 +201,8 @@ namespace Clustering {
 
         // Add values of right to values of left
         for (unsigned int i = 0; i < lhs.__dim; ++i) {
-            lhs[i] -= rhs.getValue(i);      // note: getValue returns 0 if out of bounds
+            //lhs[i] -= rhs.getValue(i);      // note: getValue returns 0 if out of bounds
+            lhs[i] -= rhs[i];
         }
 
         return lhs;
@@ -223,9 +225,11 @@ namespace Clustering {
     }
 
     bool operator==(const Point &lhs, const Point &rhs) {
-        if (lhs.__id != rhs.__id)
+        if (lhs.__dim != rhs.__dim)
             throw DimensionalityMismatchEx(lhs.__dim, rhs.__dim);
 
+        if (lhs.__id != rhs.__id)
+            return false;
         for (int i = 0; i < std::max(lhs.__dim, rhs.__dim); ++i) {
             if (lhs.getValue(i) != rhs.getValue(i))
                 return false; // Any dimensional value doesn't match
