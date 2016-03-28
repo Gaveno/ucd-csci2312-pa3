@@ -272,6 +272,7 @@ namespace Clustering {
             for (unsigned int i = 0; i < __size; ++i) {
                 //pointArray[i] = new Point((*this)[i]);
                 *(pointArray[i]) = (*this)[i];
+                //std::cout << "K = Size: " << (k == __size) << " Point: " << (*this)[i] << std::endl;
             }
             if (k > __size) {
                 for (unsigned int i = __size; i < k; ++i) {
@@ -384,7 +385,7 @@ namespace Clustering {
     // Operators Friends
     // Friends: IO
     std::ostream &operator<<(std::ostream &out, const Cluster &cluster) {
-        out << std::setprecision(5);
+        out << std::setprecision(7);
         for (int i = 0; i < cluster.getSize(); ++i) {
             out << cluster[i] << " " << POINT_CLUSTER_ID_DELIM << " " << cluster.__id << std::endl;
             //std::cout << cluster[i] << std::endl;
@@ -478,10 +479,12 @@ namespace Clustering {
     }
 
     void Cluster::Move::perform() {
-        __to.add(__from.remove(__p));
+        if (__from.contains(__p)) {
+            __to.add(__from.remove(__p));
 
-        __to.centroid.setValid(false);
-        __from.centroid.setValid(false);
+            __to.centroid.setValid(false);
+            __from.centroid.setValid(false);
+        }
 
         if (__to.__size == 0) {
             __to.centroid.toInfinity();

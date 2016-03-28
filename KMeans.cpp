@@ -25,7 +25,7 @@ namespace Clustering {
         __k = k;
 
         __clusters = new Cluster *[k];
-        __clusters[0] = new Cluster(dim);
+        for (unsigned int i = 0; i < k; ++i) __clusters[i] = new Cluster(dim);
 
         file >> *(__clusters[0]);
 
@@ -35,22 +35,16 @@ namespace Clustering {
         for (unsigned int i = 0; i < k; ++i) __initCentroids[i] = new Point(dim);
 
         __clusters[0]->pickCentroids(k, __initCentroids);
-
-        for (unsigned int i = 1; i < k; ++i) {
-            __clusters[i] = new Cluster(dim);
-            //__clusters[i]->add(__clusters[0]->remove(*(__initCentroids[i])));
-        }
     }
 
 
     KMeans::~KMeans() {
         for (unsigned int i = 0; i < __k; ++i) {
             delete __initCentroids[i];
-            delete [] __initCentroids;
-
             delete __clusters[i];
-            delete [] __clusters;
         }
+        delete [] __initCentroids;
+        delete [] __clusters;
     }
 
     // accessors
@@ -78,7 +72,9 @@ namespace Clustering {
     // write out the results to a file
     std::ostream &operator<<(std::ostream &os, const KMeans &kmeans) {
         for (unsigned int i = 0; i < kmeans.__k; ++i) {
-            os << *(kmeans.__clusters[i]);
+            //std::cout << "Cluster ID: " << kmeans.__clusters[i]->getId() << std::endl;
+            //os << *(kmeans.__clusters[i]);
+            os << kmeans[i];
         }
     }
 
@@ -86,15 +82,17 @@ namespace Clustering {
     void KMeans::run() {
         assert(__clusters[0]->getSize() > 0);
 
-        unsigned int moves = 100;
+        unsigned int moves = 1;
         unsigned int iter = 0;
 
+        bool kGreaterEqual = (__k >= __clusters[0]->getSize());
+
         for (unsigned int i = 1; i < __k; ++i) {
-            //__clusters[i] = new Cluster(__dimensionality);
-            __clusters[i]->add(__clusters[0]->remove(*(__initCentroids[i])));
+            Cluster::Move move(*(__initCentroids[i]), *(__clusters[0]), *(__clusters[i]));
+            move.perform();
         }
 
-        while (moves > 0 && iter < __maxIter) {
+        while (!kGreaterEqual && moves > 0 && iter < __maxIter) {
             moves = 0;
 
             for (unsigned int c = 0; c < __k; ++c) {
@@ -125,6 +123,9 @@ namespace Clustering {
             iter++;
         }
 
+        if (!kGreaterEqual)
+            moves = 0;
+
         __numIter = iter;
         __numMovesLastIter = moves;
         __numNonempty = 0;
@@ -132,6 +133,16 @@ namespace Clustering {
             if (__clusters[c]->getSize() > 0)
                 __numNonempty++;
         }
+        //Testing
+        //std::cout << "Non empty clusters: " << __numNonempty << std::endl;
+        /*if (__k == 4) {
+            std::cout << "Clusters non empty" << std::endl;
+            for (unsigned int i = 0; i < __k; ++i) {
+                if (__clusters[i]->getSize() > 0) {
+                    std::cout << *(__clusters[i]) << std::endl;
+                }
+            }
+        }*/
     }
 
 }
