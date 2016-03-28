@@ -68,8 +68,9 @@ namespace Clustering {
             __id = origin.__id;
 
             // If array was already assigned, delete first
-            if (__values != nullptr)
+            if (__values != nullptr) {
                 delete[] __values;
+            }
 
             __values = new double[__dim];
 

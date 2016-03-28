@@ -82,49 +82,54 @@ namespace Clustering {
     void KMeans::run() {
         assert(__clusters[0]->getSize() > 0);
 
-        unsigned int moves = 1;
+        unsigned int moves = 100;
         unsigned int iter = 0;
 
-        bool kGreaterEqual = (__k >= __clusters[0]->getSize());
+        unsigned int totalpoints = __clusters[0]->getSize();
 
         for (unsigned int i = 1; i < __k; ++i) {
             Cluster::Move move(*(__initCentroids[i]), *(__clusters[0]), *(__clusters[i]));
             move.perform();
         }
 
-        while (!kGreaterEqual && moves > 0 && iter < __maxIter) {
-            moves = 0;
+        if (__k < totalpoints) {
+            while (moves > 0 && iter < __maxIter) {
+                moves = 0;
 
-            for (unsigned int c = 0; c < __k; ++c) {
-                for (unsigned int p = 0; p < __clusters[c]->getSize(); ++p) {
-                    double distance = (*(__clusters[c]))[p].distanceTo(__clusters[c]->centroid.get());
-                    unsigned int closestIndex = c;
-                    for (unsigned int i = 0; i < __k; ++i) {
-                        if (i != c && (*(__clusters[c]))[p].distanceTo(__clusters[i]->centroid.get()) < distance) {
-                            distance = (*(__clusters[c]))[p].distanceTo(__clusters[i]->centroid.get());
-                            closestIndex = i;
+                for (unsigned int c = 0; c < __k; ++c) {
+                    for (unsigned int p = 0; p < __clusters[c]->getSize(); ++p) {
+                        double distance = (*(__clusters[c]))[p].distanceTo(__clusters[c]->centroid.get());
+                        unsigned int closestIndex = c;
+                        for (unsigned int i = 0; i < __k; ++i) {
+                            double d = (*(__clusters[c]))[p].distanceTo(__clusters[i]->centroid.get());
+                            if (i != c && d < distance) {
+                                distance = d;
+                                closestIndex = i;
+                            }
+                        }
+
+                        if (closestIndex != c) {
+                            Cluster::Move move((*(__clusters[c]))[p], *(__clusters[c]), *(__clusters[closestIndex]));
+                            move.perform();
+                            --p;
+
+                            moves++;
                         }
                     }
-
-                    if (closestIndex != c) {
-                        Cluster::Move move((*(__clusters[c]))[p], *(__clusters[c]), *(__clusters[closestIndex]));
-                        move.perform();
-
-                        moves++;
-                    }
                 }
-            }
 
-            for (unsigned int c = 0; c < __k; ++c) {
-                if (!__clusters[c]->centroid.isValid())
-                    __clusters[c]->centroid.compute();
-            }
+                for (unsigned int c = 0; c < __k; ++c) {
+                    if (!__clusters[c]->centroid.isValid())
+                        __clusters[c]->centroid.compute();
+                }
 
-            iter++;
+                iter++;
+            }
         }
-
-        if (!kGreaterEqual)
+        else {
+            iter = 1;
             moves = 0;
+        }
 
         __numIter = iter;
         __numMovesLastIter = moves;
@@ -133,16 +138,6 @@ namespace Clustering {
             if (__clusters[c]->getSize() > 0)
                 __numNonempty++;
         }
-        //Testing
-        //std::cout << "Non empty clusters: " << __numNonempty << std::endl;
-        /*if (__k == 4) {
-            std::cout << "Clusters non empty" << std::endl;
-            for (unsigned int i = 0; i < __k; ++i) {
-                if (__clusters[i]->getSize() > 0) {
-                    std::cout << *(__clusters[i]) << std::endl;
-                }
-            }
-        }*/
     }
 
 }

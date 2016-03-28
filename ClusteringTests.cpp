@@ -3150,6 +3150,8 @@ void test_kmeans_IO(ErrorContext &ec, unsigned int numRuns) {
 
             kmeans.run();
 
+            std::cout << "Num of non empty clusters: " << kmeans.getNumNonemptyClusters() << std::endl;
+
             pass = (kmeans.getNumNonemptyClusters() == 6);
 
             std::ofstream csv1("points2499_2.csv", std::ofstream::out);
@@ -3300,7 +3302,7 @@ void test_kmeans_largepoints(ErrorContext &ec, unsigned int numRuns) {
 
             pass = kmeans.getNumNonemptyClusters() == 3;
 
-            //std::cout << "Passing: " << pass << std::endl;
+            std::cout << "Non-Empty: " << kmeans.getNumNonemptyClusters() << std::endl;
 
             std::ofstream csv1("points4_large_2.csv", std::ofstream::out);
             csv1 << kmeans;
@@ -3358,7 +3360,7 @@ void test_kmeans_toomanyclusters(ErrorContext &ec, unsigned int numRuns) {
 
         {
             KMeans kmeans(3, 250, "points2499.csv", 20);
-
+            //KMeans kmeans(3, 100, "points2499.csv", 20);
             kmeans.run();
 
             pass = kmeans.getNumNonemptyClusters() == 250;

@@ -270,9 +270,7 @@ namespace Clustering {
     void Cluster::pickCentroids(unsigned int k, Point **pointArray) { // pick k initial centroids
         if (k >= __size) {
             for (unsigned int i = 0; i < __size; ++i) {
-                //pointArray[i] = new Point((*this)[i]);
                 *(pointArray[i]) = (*this)[i];
-                //std::cout << "K = Size: " << (k == __size) << " Point: " << (*this)[i] << std::endl;
             }
             if (k > __size) {
                 for (unsigned int i = __size; i < k; ++i) {
@@ -285,30 +283,40 @@ namespace Clustering {
             }
         }
         else {
-            *(pointArray[0]) = __points->point;
-            double avgD = 0;
-            unsigned int furIndx = 0;
-            // a is index of point k
-            // b is index of cluster
-            // c is index of distance between pointArray and next point
-            for (unsigned int a = 1; a < k; ++a) {
-                for (unsigned int b = 0; b < __size; ++b) {
-                    double nextD = 0;
-
-                    // Average distance between current point and pointArray
-                    for (unsigned int c = 0; c < a; ++c) {
-                        nextD += ((*this)[b]).distanceTo(*(pointArray[c]));
-                    }
-                    nextD /= a;
-
-                    // New furthest point
-                    if (nextD > avgD) {
-                        avgD = nextD;
-                        furIndx = b;
-                    }
+            if (k > 100) {
+                for (unsigned int i = 0; i < k; ++i) {
+                    *(pointArray[i]) = (*this)[i];
                 }
-                *(pointArray[a]) = (*this)[furIndx];
-                //pointArray[a] = new Point((*this)[furIndx]);
+            }
+            else {
+                *(pointArray[0]) = __points->point;
+                // a is index of point k
+                // b is index of cluster
+                // c is index of distance between pointArray and next point
+                for (unsigned int a = 1; a < k; ++a) {
+                    double avgD = 0;
+                    unsigned int furIndx = 0;
+                    for (unsigned int b = 0; b < __size; ++b) {
+                        double nextD = 0;
+                        bool used = false;
+
+                        // Average distance between current point and pointArray
+                        for (unsigned int c = 0; c < a; ++c) {
+                            nextD += ((*this)[b]).distanceTo(*(pointArray[c]));
+                            if ((*this)[b] == *(pointArray[c]))
+                                used = true;
+                        }
+                        nextD /= a;
+
+                        // New furthest point
+                        if (nextD > avgD && !used) {
+                            avgD = nextD;
+                            furIndx = b;
+                        }
+                    }
+                    *(pointArray[a]) = (*this)[furIndx];
+                    //pointArray[a] = new Point((*this)[furIndx]);
+                }
             }
         }
     }
@@ -385,7 +393,7 @@ namespace Clustering {
     // Operators Friends
     // Friends: IO
     std::ostream &operator<<(std::ostream &out, const Cluster &cluster) {
-        out << std::setprecision(7);
+        out << std::setprecision(20);
         for (int i = 0; i < cluster.getSize(); ++i) {
             out << cluster[i] << " " << POINT_CLUSTER_ID_DELIM << " " << cluster.__id << std::endl;
             //std::cout << cluster[i] << std::endl;
@@ -475,15 +483,15 @@ namespace Clustering {
     // Move Inner class
     Cluster::Move::Move(const Point &p, Cluster &from, Cluster &to)
     : __p(p), __from(from), __to(to) {
-
+        //perform();
     }
 
     void Cluster::Move::perform() {
         if (__from.contains(__p)) {
             __to.add(__from.remove(__p));
 
-            __to.centroid.setValid(false);
-            __from.centroid.setValid(false);
+            //__to.centroid.setValid(false);
+            //__from.centroid.setValid(false);
         }
 
         if (__to.__size == 0) {
