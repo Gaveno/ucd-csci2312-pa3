@@ -108,7 +108,7 @@ namespace Clustering {
                             }
                         }
 
-                        if (closestIndex != c) {
+                        if (closestIndex != c && __clusters[c]->getSize() > 1) {
                             Cluster::Move move((*(__clusters[c]))[p], *(__clusters[c]), *(__clusters[closestIndex]));
                             move.perform();
                             --p;
